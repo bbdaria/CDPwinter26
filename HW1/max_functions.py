@@ -1,5 +1,4 @@
 import numpy as np
-import math
 from numba import cuda, njit, prange, float32
 import timeit
 
@@ -22,12 +21,13 @@ def max_numba(A, B):
      np.array
          element-wise maximum between A and B
      """
-    C = np.zeros(A.shape, dtype=A.dtype)
+    C = np.empty_like(A)
     for i in prange(A.shape[0]):       
-        for j in range(A.shape[1]):      
-            a = A[i, j]
-            b = B[i, j]
-            C[i, j] = a if a > b else b 
+        for j in prange(A.shape[1]):      
+            if A[i,j] >= B[i,j]:
+                C[i,j] = A[i,j]
+            else:
+                C[i,j] = B[i,j] 
     return C
     
 
@@ -39,11 +39,13 @@ def max_gpu(A, B):
      np.array
          element-wise maximum between A and B
      """
-    dev_c = cuda.device_array(A.shape, A.dtype)
-    threads_per_block = 128
-    blocks_per_grid = math.ceil(A.size / threads_per_block)
-    max_kernel[blocks_per_grid, threads_per_block](A, B, dev_c)
-    C = dev_c.copy_to_host()
+    dev_A = cuda.to_device(A)
+    dev_B = cuda.to_device(B)
+    dev_C = cuda.device_array(np.shape(A))
+    threadsperblock = 1000 
+    blockspergrid = 1000
+    max_kernel[blockspergrid, threadsperblock](dev_A, dev_B, dev_C)
+    C = dev_C.copy_to_host()
     return C
     
 
@@ -52,18 +54,7 @@ def max_gpu(A, B):
 def max_kernel(A, B, C):
     tx = cuda.threadIdx.x
     bx = cuda.blockIdx.x
-    bw = cuda.blockDim.x
-    idx = tx + bx * bw
-
-    n = A.shape[0] * A.shape[1]
-
-    if idx < n:
-        cols = A.shape[1]
-        i = idx // cols
-        j = idx % cols
-        a = A[i, j]
-        b = B[i, j]
-        C[i, j] = a if a > b else b
+    C[bx,tx] = max(A[bx,tx], B[bx,tx])
 
 
 def verify_solution():
