@@ -1,7 +1,7 @@
 import numpy as np
+import math
 from numba import cuda, njit, prange, float32
 import timeit
-
 
 def max_cpu(A, B):
     """
@@ -10,7 +10,8 @@ def max_cpu(A, B):
      np.array
          element-wise maximum between A and B
      """
-    raise NotImplementedError("To be implemented")
+    return [[max(A[i][j], B[i][j]) for j in range(len(A[0]))] for i in range(len(A))]
+    
 
 
 @njit(parallel=True)
@@ -21,7 +22,14 @@ def max_numba(A, B):
      np.array
          element-wise maximum between A and B
      """
-    raise NotImplementedError("To be implemented")
+    C = np.zeros(A.shape, dtype=A.dtype)
+    for i in prange(A.shape[0]):       
+        for j in range(A.shape[1]):      
+            a = A[i, j]
+            b = B[i, j]
+            C[i, j] = a if a > b else b 
+    return C
+    
 
 
 def max_gpu(A, B):
@@ -31,12 +39,31 @@ def max_gpu(A, B):
      np.array
          element-wise maximum between A and B
      """
-    raise NotImplementedError("To be implemented")
+    dev_c = cuda.device_array(A.shape, A.dtype)
+    threads_per_block = 128
+    blocks_per_grid = math.ceil(A.size / threads_per_block)
+    max_kernel[blocks_per_grid, threads_per_block](A, B, dev_c)
+    C = dev_c.copy_to_host()
+    return C
+    
 
 
 @cuda.jit
 def max_kernel(A, B, C):
-    raise NotImplementedError("To be implemented")
+    tx = cuda.threadIdx.x
+    bx = cuda.blockIdx.x
+    bw = cuda.blockDim.x
+    idx = tx + bx * bw
+
+    n = A.shape[0] * A.shape[1]
+
+    if idx < n:
+        cols = A.shape[1]
+        i = idx // cols
+        j = idx % cols
+        a = A[i, j]
+        b = B[i, j]
+        C[i, j] = a if a > b else b
 
 
 def verify_solution():
