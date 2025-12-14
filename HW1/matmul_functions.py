@@ -17,16 +17,36 @@ def matmul_transpose_trivial(X):
 @njit(parallel=True)
 def matmul_transpose_numba(X):
     #raise NotImplementedError("To be implemented")
-
+    C = np.empty_like(X)
+    for row in prange(len(X)):
+        for col in prange(len(X)):
+            sum = 0
+            for i in range(len(X[row])):
+                sum = sum + (X[row][i] * X[col][i])
+            C[row][col] = sum
+    return C
 
 
 def matmul_transpose_gpu(X):
-    raise NotImplementedError("To be implemented")
+    #raise NotImplementedError("To be implemented")
+    dev_X = cuda.to_device(X)
+    dev_C = cuda.device_array(np.shape(X))
+    threadsperblock = len(X)
+    blockspergrid = len(X)
+    matmul_kernel[blockspergrid,threadsperblock](dev_X,dev_C)
+    C = dev_C.copy_to_host()
+    return C
 
 
 @cuda.jit
 def matmul_kernel(A, C):
-    raise NotImplementedError("To be implemented")
+    #raise NotImplementedError("To be implemented")
+    tx = cuda.threadIdx.x
+    bx = cuda.blockIdx.x
+    sum = 0
+    for i in range(len(A[0])):
+        sum = sum + (A[bx][i] * A[tx][i])
+    C[bx][tx] = sum
 
 
 def verify_solution():
