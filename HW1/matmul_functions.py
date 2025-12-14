@@ -4,8 +4,7 @@ import timeit
 
 
 def matmul_transpose_trivial(X):
-    #raise NotImplementedError("To be implemented")
-    C = np.empty_like(X)
+    C = np.empty((len(X),len(X)))
     for row in range(len(X)):
         for col in range(len(X)):
             sum = 0
@@ -16,8 +15,7 @@ def matmul_transpose_trivial(X):
 
 @njit(parallel=True)
 def matmul_transpose_numba(X):
-    #raise NotImplementedError("To be implemented")
-    C = np.empty_like(X)
+    C = np.empty((len(X),len(X)))
     for row in prange(len(X)):
         for col in prange(len(X)):
             sum = 0
@@ -28,11 +26,10 @@ def matmul_transpose_numba(X):
 
 
 def matmul_transpose_gpu(X):
-    #raise NotImplementedError("To be implemented")
     dev_X = cuda.to_device(X)
     dev_C = cuda.device_array(np.shape(X))
-    threadsperblock = len(X)
-    blockspergrid = len(X)
+    threadsperblock = 1024
+    blockspergrid = 1
     matmul_kernel[blockspergrid,threadsperblock](dev_X,dev_C)
     C = dev_C.copy_to_host()
     return C
@@ -40,13 +37,17 @@ def matmul_transpose_gpu(X):
 
 @cuda.jit
 def matmul_kernel(A, C):
-    #raise NotImplementedError("To be implemented")
     tx = cuda.threadIdx.x
-    bx = cuda.blockIdx.x
+    #bx = cuda.blockIdx.x
     sum = 0
-    for i in range(len(A[0])):
-        sum = sum + (A[bx][i] * A[tx][i])
-    C[bx][tx] = sum
+    #for i in range(len(A[0])):
+    #    sum = sum + (A[bx][i] * A[tx][i])
+    #C[bx][tx] = sum
+    for col in prange(len(A)):
+        sum = 0
+        for i in range(len(A[0])):
+            sum = sum + (A[tx][i] * A[col][i])
+    C[tx][col] = sum
 
 
 def verify_solution():
