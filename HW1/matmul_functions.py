@@ -26,8 +26,9 @@ def matmul_transpose_numba(X):
 
 
 def matmul_transpose_gpu(X):
+    rows, cols = np.shape(X)
     dev_X = cuda.to_device(X)
-    dev_C = cuda.device_array(np.shape(X))
+    dev_C = cuda.device_array((rows,rows))
     threadsperblock = 1024
     blockspergrid = 1
     matmul_kernel[blockspergrid,threadsperblock](dev_X,dev_C)
