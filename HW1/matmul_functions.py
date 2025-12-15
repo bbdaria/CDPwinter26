@@ -4,6 +4,11 @@ import timeit
 
 
 def matmul_transpose_trivial(X):
+    """
+    the function computes X*X^T in the trivial way.
+    :param X: a matrix
+    :return: a matrix containing X*X^T
+    """
     C = np.empty((len(X),len(X)))
     for row in range(len(X)):
         for col in range(len(X)):
@@ -15,6 +20,11 @@ def matmul_transpose_trivial(X):
 
 @njit(parallel=True)
 def matmul_transpose_numba(X):
+    """
+    the algorithm of this function is simmilar to matmul_transpose_trivial but is uses numba to make the code parallel.
+    :param X: a matrix
+    :return: a matrix containing X*X^T
+    """
     C = np.empty((len(X),len(X)))
     for row in prange(len(X)):
         for col in prange(len(X)):
@@ -26,6 +36,11 @@ def matmul_transpose_numba(X):
 
 
 def matmul_transpose_gpu(X):
+    """
+    this function allocates two matrix on the gpu and calls matmul_kernel with 1 block and 1024 threads
+    :param X: a matrix
+    :return: a matrix containing X*X^T
+    """
     rows, cols = np.shape(X)
     dev_X = cuda.to_device(X)
     dev_C = cuda.device_array((rows,rows))
@@ -38,6 +53,11 @@ def matmul_transpose_gpu(X):
 
 @cuda.jit
 def matmul_kernel(A, C):
+    """
+    this function calculates A*A^T and puts it in C in the GPU
+    :param A: a matrix
+    :param C: an empty matrix the function fills with A*A^T
+    """
     rowsA, colsA = A.shape
     tx = cuda.threadIdx.x
     while(tx < (rowsA)**2):
