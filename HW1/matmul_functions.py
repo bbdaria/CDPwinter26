@@ -37,17 +37,24 @@ def matmul_transpose_gpu(X):
 
 @cuda.jit
 def matmul_kernel(A, C):
+    rowsA, colsA = A.shape()
     tx = cuda.threadIdx.x
+    while(tx < (rowsA)**2):
+        i = tx/rowsA
+        j = tx % rowsA
+        C[i,j] = 0
+        for k in range(colsA):
+            C[i, j] += A[i, k] * A[j, k]
+        tx += 1024
     #bx = cuda.blockIdx.x
-    sum = 0
     #for i in range(len(A[0])):
     #    sum = sum + (A[bx][i] * A[tx][i])
     #C[bx][tx] = sum
-    for col in prange(len(A)):
-        sum = 0
-        for i in range(len(A[0])):
-            sum = sum + (A[tx][i] * A[col][i])
-    C[tx][col] = sum
+    #for col in prange(len(A)):
+    #    sum = 0
+    #    for i in range(len(A[0])):
+    #        sum = sum + (A[tx][i] * A[col][i])
+    #C[tx][col] = sum
 
 
 def verify_solution():
