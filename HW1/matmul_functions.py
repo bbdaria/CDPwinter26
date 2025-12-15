@@ -37,7 +37,7 @@ def matmul_transpose_gpu(X):
 
 @cuda.jit
 def matmul_kernel(A, C):
-    rowsA, colsA = A.shape()
+    rowsA, colsA = A.shape
     tx = cuda.threadIdx.x
     while(tx < (rowsA)**2):
         i = tx/rowsA
