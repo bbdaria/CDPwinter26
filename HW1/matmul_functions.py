@@ -40,7 +40,7 @@ def matmul_kernel(A, C):
     rowsA, colsA = A.shape
     tx = cuda.threadIdx.x
     while(tx < (rowsA)**2):
-        i = tx/rowsA
+        i = tx // rowsA
         j = tx % rowsA
         C[i,j] = 0
         for k in range(colsA):
