@@ -37,7 +37,7 @@ class MyQueue(object):
         ------
         An object
         '''
-        self.readers.recv()
+        return self.readers.recv()
             
     
     def empty(self):
