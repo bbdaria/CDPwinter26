@@ -7,6 +7,10 @@
 # and Machine Learning" course (02360370), Winter 2025
 #
 import multiprocessing
+import my_queue
+from scipy import ndimage
+from scipy.stats import skew
+import numpy as np
 
 
 class Worker(multiprocessing.Process):
@@ -29,7 +33,24 @@ class Worker(multiprocessing.Process):
         
         You should add parameters if you think you need to.
         '''
-        raise NotImplementedError("To be implemented")
+
+        self.jobs = jobs
+        self.result = result
+        self.training_data = training_data
+        self.batch_size = batch_size
+
+    @staticmethod
+    def _to_2d(image):
+        # Accept (784,) or (28,28)
+        if image.ndim == 1:
+            return image.reshape(28, 28)
+        return image
+
+    @staticmethod
+    def _to_1d(image, original_ndim):
+        if original_ndim == 1:
+            return image.reshape(-1)
+        return image
 
     @staticmethod
     def rotate(image, angle):
@@ -46,7 +67,9 @@ class Worker(multiprocessing.Process):
         ------
         An numpy array of same shape
         '''
-        raise NotImplementedError("To be implemented")
+        img2 = Worker._to_2d(image)
+        rotated_image = ndimage.rotate(img2, angle, reshape=False, mode="constant", cval=0) 
+        return Worker._to_1d(rotated_image, image.ndim)
 
     @staticmethod
     def shift(image, dx, dy):
@@ -65,7 +88,10 @@ class Worker(multiprocessing.Process):
         ------
         An numpy array of same shape
         '''
-        raise NotImplementedError("To be implemented")
+        img2 = Worker._to_2d(image)
+        shift_amount = (-dx, -dy)
+        shifted_image = ndimage.shift(img2, shift_amount, mode='constant', cval=0)
+        return shifted_image
     
     @staticmethod
     def add_noise(image, noise):
@@ -84,7 +110,13 @@ class Worker(multiprocessing.Process):
         ------
         An numpy array of same shape
         '''
-        raise NotImplementedError("To be implemented")
+        new_image = np.shape(image)
+        rows,cols = image.shape
+        for i in range(0, rows - 1):
+            for j in range(0, cols - 1):
+                new_image[i][j] = image[i][j] + np.random.normal(-1 * noise, noise)
+        return new_image
+
 
     @staticmethod
     def skew(image, tilt):
@@ -101,7 +133,18 @@ class Worker(multiprocessing.Process):
         ------
         An numpy array of same shape
         '''
-        raise NotImplementedError("To be implemented")
+        img2 = Worker._to_2d(image)
+        new_image = np.shape(img2)
+        rows, cols = img2.shape
+        for i in range(0, rows - 1):
+            for j in range(0, cols - 1):
+                x = j + tilt
+                if x < 0 or x > cols:
+                    new_image[i][j] = 0
+                else:
+                    new_image[i][j] = img2[i][j+tilt]
+        return Worker._to_1d(new_image, image.ndim)
+        
 
     def process_image(self, image):
         '''Apply the image process functions
@@ -116,7 +159,15 @@ class Worker(multiprocessing.Process):
         ------
         An numpy array of same shape
         '''
-        raise NotImplementedError("To be implemented")
+        new_image = image.copy()
+        new_image = rotate(new_image, random())
+        new_image = shift(new_image, random(), random())
+        new_image = add_noise(new_image, random())
+        new_image = skew(new_image, random())
+
+        return new_image
+
+
 
     def run(self):
         '''Process images from the jobs queue and add the result to the result queue.
