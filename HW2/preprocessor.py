@@ -114,7 +114,7 @@ class Worker(multiprocessing.Process):
         rows,cols = image.shape
         for i in range(0, rows - 1):
             for j in range(0, cols - 1):
-                new_image[i][j] = image[i][j] + np.random.normal(-1 * noise, noise)
+                new_image[i][j] = image[i][j] + np.random.uniform(low = -1 * noise, high =noise)
         return new_image
 
 
@@ -134,15 +134,13 @@ class Worker(multiprocessing.Process):
         An numpy array of same shape
         '''
         img2 = Worker._to_2d(image)
-        new_image = np.shape(img2)
+        new_image = np.zeros(img2.shape)
         rows, cols = img2.shape
         for i in range(0, rows - 1):
             for j in range(0, cols - 1):
-                x = j + tilt
-                if x < 0 or x > cols:
-                    new_image[i][j] = 0
-                else:
-                    new_image[i][j] = img2[i][j+tilt]
+                x = j + i*tilt
+                if x >= 0 or x <= cols:
+                    new_image[i][j] = img2[i][x]
         return Worker._to_1d(new_image, image.ndim)
         
 
@@ -159,11 +157,17 @@ class Worker(multiprocessing.Process):
         ------
         An numpy array of same shape
         '''
+        angle = random.randint(-15, 15)
+        dx = random.randint(-2, 2)
+        dy = random.randint(-2, 2)
+        noise = random.uniform(0, 0.15)
+        skew_val = random.uniform(-0.15, 0.15)
+
         new_image = image.copy()
-        new_image = rotate(new_image, random())
-        new_image = shift(new_image, random(), random())
-        new_image = add_noise(new_image, random())
-        new_image = skew(new_image, random())
+        new_image = rotate(new_image, angle)
+        new_image = shift(new_image, dx, dy)
+        new_image = add_noise(new_image, noise)
+        new_image = skew(new_image, skew_val)
 
         return new_image
 
