@@ -16,6 +16,13 @@ from preprocessor import Worker
 
 class IPNeuralNetwork(NeuralNetwork):
     
+    def __init__(self, sizes=None, learning_rate=1.0, mini_batch_size=16, number_of_batches=16,
+                 epochs=10, matmul=np.matmul):
+        super().__init__(sizes, learning_rate, mini_batch_size, number_of_batches, epochs, matmul)
+        self.workers = None
+        self.results = None
+        self.jobs = None
+
     def fit(self, training_data, validation_data=None):
         '''
         Override this function to create and destroy workers
