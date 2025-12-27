@@ -65,6 +65,7 @@ class IPNeuralNetwork(NeuralNetwork):
 
             # 1. Sample random indices from the data
             # We select 'batch_size' random indices from the available data
+            #TODO: use option 2 - Worker.run()
             keys = np.random.choice(len(data), batch_size,
                                     replace=False)  # ensures unique images in a batch
             # Extract the corresponding labels
