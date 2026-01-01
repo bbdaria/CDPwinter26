@@ -53,11 +53,12 @@ class IPNeuralNetwork(NeuralNetwork):
         # Call the parent's fit. Notice how create_batches is called inside super.fit().
         super().fit(training_data, validation_data)
         # 3. Stop Workers
-        for _ in self.workers:
+        for i in range(num_workers):
             self.jobs.put(None)
+        
         self.jobs.join()
-        for w in self.workers:
-            w.join()
+        for i in range(num_workers):
+            self.workers[i].join()
 
         
         
@@ -67,15 +68,10 @@ class IPNeuralNetwork(NeuralNetwork):
         Override this function to return self.number_of_batches batches created by workers
         Hint: you can either generate (i.e sample randomly from the training data) the image batches here OR in Worker.run()
         '''
-        mini_batches = []
-
-        # enqueue all batch-jobs first (lets many workers run in parallel)
+        new_batches = []
         for _ in range(self.number_of_batches):
-            self.jobs.put(1)
-
-        # now collect all results
-        for _ in range(self.number_of_batches):
-            batch_images, batch_labels = self.results.get()
-            mini_batches.append((batch_images, batch_labels))
-
-        return mini_batches
+            new_batches.append(self.result.get())
+        
+        return new_batches
+    
+    
