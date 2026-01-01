@@ -68,8 +68,14 @@ class IPNeuralNetwork(NeuralNetwork):
         Hint: you can either generate (i.e sample randomly from the training data) the image batches here OR in Worker.run()
         '''
         mini_batches = []
+
+        # enqueue all batch-jobs first (lets many workers run in parallel)
         for _ in range(self.number_of_batches):
-            self.jobs.put(1)  # any non-None signals "make a batch"
+            self.jobs.put(1)
+
+        # now collect all results
+        for _ in range(self.number_of_batches):
             batch_images, batch_labels = self.results.get()
             mini_batches.append((batch_images, batch_labels))
+
         return mini_batches
