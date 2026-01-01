@@ -10,6 +10,7 @@ from numba import cuda
 from numba import njit
 import imageio
 import matplotlib.pyplot as plt
+import numpy as np
 
 def correlation_gpu(kernel, image):
     '''Correlate using gpu
@@ -54,7 +55,16 @@ def sobel_operator():
     pic = load_image()
     # your calculations
 
-    raise NotImplementedError("To be implemented")
+    sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
+    sobel_filter = np.array(sobel_matrix)
+
+    Gx = correlation_numba(sobel_filter, pic)
+    Gy = correlation_numba(np.transpose(sobel_filter), pic)
+
+    rows, cols = Gx.shape
+    result = [[np.sqrt(np.pow(Gx[i][j],2)+np.pow(Gy[i][j],2)) for i in range(rows)] for j in range(cols)]
+
+    return result
 
 
 def load_image(): 
