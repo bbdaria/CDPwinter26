@@ -53,9 +53,11 @@ class IPNeuralNetwork(NeuralNetwork):
         # Call the parent's fit. Notice how create_batches is called inside super.fit().
         super().fit(training_data, validation_data)
         # 3. Stop Workers
+        for _ in self.workers:
+            self.jobs.put(None)
+        self.jobs.join()
         for w in self.workers:
-            w.terminate()
-            w.join()  # wait to finish
+            w.join()
 
         
         
@@ -66,30 +68,8 @@ class IPNeuralNetwork(NeuralNetwork):
         Hint: you can either generate (i.e sample randomly from the training data) the image batches here OR in Worker.run()
         '''
         mini_batches = []
-
-        # Loop for the number of batches required per epoch
-        for i in range(self.number_of_batches):
-
-            # 1. Sample random indices from the data
-            # We select 'batch_size' random indices from the available data
-            #TODO: use option 2 - Worker.run()
-            keys = np.random.choice(len(data), batch_size,
-                                    replace=False)  # ensures unique images in a batch
-            # Extract the corresponding labels
-            batch_labels = labels[keys]
-
-            # 2. Send jobs (images) to the Workers
-            for key in keys:
-                self.jobs.put(data[key])
-
-            # 3. Collect results from the Workers
-            batch_data = []
-            for _ in range(batch_size):
-                # Wait for a result from the results queue
-                augmented_image = self.results.get()
-                batch_data.append(augmented_image)
-
-            batch_data = np.array(batch_data)
-            mini_batches.append((batch_data, batch_labels))
-
+        for _ in range(self.number_of_batches):
+            self.jobs.put(1)  # any non-None signals "make a batch"
+            batch_images, batch_labels = self.results.get()
+            mini_batches.append((batch_images, batch_labels))
         return mini_batches
