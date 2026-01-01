@@ -111,11 +111,13 @@ class Worker(multiprocessing.Process):
         ------
         An numpy array of same shape
         '''
-        new_image = np.shape(image)
-        rows,cols = image.shape
-        for i in range(0, rows - 1):
-            for j in range(0, cols - 1):
-                new_image[i][j] = image[i][j] + np.random.uniform(low = -1 * noise, high =noise)
+        rows, cols = image.shape
+        new_image = np.empty_like(image)
+
+        for i in range(rows):
+            for j in range(cols):
+                new_image[i, j] = image[i, j] + np.random.uniform(-noise, noise)
+
         return new_image
 
 
