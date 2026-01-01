@@ -7,6 +7,7 @@
 # and Machine Learning" course (02360370), Winter 2025
 #
 import multiprocessing
+import random
 import my_queue
 from scipy import ndimage
 from scipy.stats import skew
@@ -164,10 +165,10 @@ class Worker(multiprocessing.Process):
         skew_val = random.uniform(-0.15, 0.15)
 
         new_image = image.copy()
-        new_image = rotate(new_image, angle)
-        new_image = shift(new_image, dx, dy)
-        new_image = add_noise(new_image, noise)
-        new_image = skew(new_image, skew_val)
+        new_image = Worker.rotate(new_image, angle)
+        new_image = Worker.shift(new_image, dx, dy)
+        new_image = Worker.add_noise(new_image, noise)
+        new_image = Worker.skew(new_image, skew_val)
 
         return new_image
 
