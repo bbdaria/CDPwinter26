@@ -178,4 +178,26 @@ class Worker(multiprocessing.Process):
 		Hint: you can either generate (i.e sample randomly from the training data)
 		the image batches here OR in ip_network.create_batches
         '''
-        raise NotImplementedError("To be implemented")
+        while True:
+            job = self.jobs.get()
+            if job is None:
+                self.jobs.task_done()
+                return
+            
+            training_images, training_labels = self.training_data[0], self.training_data[1]
+
+            indexes = random.sample(range(0, training_images.shape[0]), self.batch_size)
+            images, labels = (training_images[indexes], training_labels[indexes])
+
+            batch_images = np.empty(shape=(self.batch_size * 2, images.shape[1]))
+            batch_labels = np.empty(shape=(self.batch_size * 2, labels.shape[1]))
+
+            for i in range(0, self.batch_size):
+                batch_images[i*2]  = self.process_image(images[i])
+                batch_images[i*2 + 1] = images[i]
+                batch_labels[i*2] = labels[i]
+                batch_labels[i*2 + 1] = labels[i]
+                
+            indexes = random.sample(range(0, self.batch_size * 2), self.batch_size)
+            self.result.put((batch_images[indexes], batch_labels[indexes]))
+            self.jobs.task_done()
