@@ -70,7 +70,7 @@ class IPNeuralNetwork(NeuralNetwork):
         '''
         new_batches = []
         for _ in range(self.number_of_batches):
-            new_batches.append(self.result.get())
+            new_batches.append(self.results.get())
         
         return new_batches
     
