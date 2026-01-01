@@ -137,14 +137,17 @@ class Worker(multiprocessing.Process):
         An numpy array of same shape
         '''
         img2 = Worker._to_2d(image)
-        new_image = np.zeros(img2.shape)
         rows, cols = img2.shape
-        for i in range(0, rows - 1):
-            for j in range(0, cols - 1):
-                x = j + i*tilt
-                if x >= 0 or x <= cols:
-                    new_image[i][j] = img2[i][x]
+        new_image = np.zeros_like(img2)
+
+        for i in range(rows):
+            for j in range(cols):
+                x = int(round(j+i*tilt)) 
+                if 0 <= x < cols:        
+                    new_image[i, j] = img2[i, x]
+
         return Worker._to_1d(new_image, image.ndim)
+
         
 
     def process_image(self, image):
