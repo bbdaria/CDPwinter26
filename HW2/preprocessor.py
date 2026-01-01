@@ -91,8 +91,8 @@ class Worker(multiprocessing.Process):
         '''
         img2 = Worker._to_2d(image)
         shift_amount = (-dx, -dy)
-        shifted_image = ndimage.shift(img2, shift_amount, mode='constant', cval=0)
-        return shifted_image
+        shifted_image = ndimage.shift(img2, shift_amount, mode="constant", cval=0)
+        return Worker._to_1d(shifted_image, image.ndim)
     
     @staticmethod
     def add_noise(image, noise):
@@ -111,14 +111,10 @@ class Worker(multiprocessing.Process):
         ------
         An numpy array of same shape
         '''
-        rows, cols = image.shape
-        new_image = np.empty_like(image)
-
-        for i in range(rows):
-            for j in range(cols):
-                new_image[i, j] = image[i, j] + np.random.uniform(-noise, noise)
-
-        return new_image
+        img2 = Worker._to_2d(image)
+        noise_matrix = np.random.uniform(-noise, noise, size=img2.shape)
+        noised = img2 + noise_matrix
+        return Worker._to_1d(noised, image.ndim)
 
 
     @staticmethod
