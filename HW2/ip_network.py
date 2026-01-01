@@ -28,7 +28,7 @@ class IPNeuralNetwork(NeuralNetwork):
         Override this function to create and destroy workers
         '''
         self.jobs = multiprocessing.JoinableQueue()
-        self.results = MyQueue()
+        self.result = multiprocessing.SimpleQueue()
         # 1. Create Workers
         try:
             num_workers = int(os.environ['SLURM_CPUS_PER_TASK'])
