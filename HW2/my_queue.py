@@ -25,7 +25,7 @@ class MyQueue(object):
         msg : object
             the message to put.
         '''
-        with lock:
+        with self.lock:
             self.writers.send(msg)
             
 
