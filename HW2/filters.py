@@ -142,7 +142,7 @@ def sobel_operator():
     Gy = correlation_numba(np.transpose(sobel_filter), pic)
 
     rows, cols = Gx.shape
-    result = [[np.sqrt(np.pow(Gx[i][j],2)+np.pow(Gy[i][j],2)) for i in range(rows)] for j in range(cols)]
+    result = [[np.sqrt((Gx[i][j]**2)+(Gy[i][j]**2)) for i in range(rows)] for j in range(cols)]
 
     return result
 
