@@ -6,11 +6,43 @@
 # "Concurrent and Distributed Programming for Data processing
 # and Machine Learning" course (02360370), Winter 2025
 #
+import math
+
 from numba import cuda
 from numba import njit
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
+
+
+@cuda.jit
+def correlation_kernel(kernel, image, result):
+    # coordinates of current thread
+    row, col = cuda.grid(2)
+
+    image_height, image_width = image.shape
+    kernel_height, kernel_width = kernel.shape
+
+    pad_h = kernel_height // 2
+    pad_w = kernel_width // 2
+
+    # Check borders
+    if row < image_height and col < image_width:
+        value = 0.0
+
+        # Iterate over kernel
+        for i in range(kernel_height):
+            for j in range(kernel_width):
+
+                # neighbour coords
+                current_row = row - pad_h + i
+                current_col = col - pad_w + j
+
+                # check borders
+                if 0 <= current_row < image_height and 0 <= current_col < image_width:
+                    value += image[current_row, current_col] * kernel[i, j]
+
+        result[row, col] = value
 
 def correlation_gpu(kernel, image):
     '''Correlate using gpu
@@ -25,8 +57,27 @@ def correlation_gpu(kernel, image):
     ------
     An numpy array of same shape as image
     '''
-    raise NotImplementedError("To be implemented")
+    # 1. Send data to GPU
+    d_image = cuda.to_device(image) #copies data to gpu
+    d_kernel = cuda.to_device(kernel)
 
+    # allocate space for result
+    d_result = cuda.device_array_like(image)
+
+    # 2. Configurate launch
+    # Block - group of threads that will work together
+    threads_per_block = (16, 16)
+
+    # Grid - blocks to cover full image
+    blocks_per_grid_x = math.ceil(image.shape[0] / threads_per_block[0])
+    blocks_per_grid_y = math.ceil(image.shape[1] / threads_per_block[1])
+    blocks_per_grid = (blocks_per_grid_x, blocks_per_grid_y)
+
+    # 3. launch kernel
+    correlation_kernel[blocks_per_grid, threads_per_block](d_kernel, d_image, d_result)
+
+    # 4. copy result back to CPU
+    return d_result.copy_to_host()
 
 @njit
 def correlation_numba(kernel, image):
