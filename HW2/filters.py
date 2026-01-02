@@ -42,8 +42,37 @@ def correlation_numba(kernel, image):
     ------
     An numpy array of same shape as image
     '''
-    raise NotImplementedError("To be implemented")
+    # Image and kernel dimensions
+    image_height, image_width = image.shape
+    kernel_height, kernel_width = kernel.shape
 
+    # Find center of kernel (correlation)
+    pad_h = kernel_height // 2
+    pad_w = kernel_width // 2
+
+    result = np.zeros_like(image)
+
+    #iterate through pixels of an image
+    for i in range(image_height):
+        for j in range(image_width):
+
+            pixel_sum = 0.0
+
+            # Go over all elements of kernel
+            for k in range(kernel_height):
+                for l in range(kernel_width):
+
+                    # Coordinates of a neighbour
+                    # adjust them, so they on the center of a kernel
+                    ni = i - pad_h + k
+                    nj = j - pad_w + l
+
+                    # Check borders
+                    if 0 <= ni < image_height and 0 <= nj < image_width:
+                        pixel_sum += image[ni, nj] * kernel[k, l]
+
+            result[i, j] = pixel_sum
+    return result
 
 def sobel_operator():
     '''Load the image and perform the operator
