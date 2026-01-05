@@ -129,7 +129,6 @@ def sobel_operator():
 
     rows, cols = Gx.shape
     result = [[np.sqrt((Gx[i][j]**2)+(Gy[i][j]**2)) for i in range(rows)] for j in range(cols)]
-
     return result
 
 
@@ -149,5 +148,8 @@ def show_image(image):
     image: list
         2d list of pixels
     """
-    plt.imshow(image, cmap='gray')
-    plt.show()
+    #plt.imshow(image, cmap='gray')
+    #plt.show()
+
+    imageio.imwrite('my_result.png', image.astype(np.uint8))
+    print("Saved image to my_result.png")
