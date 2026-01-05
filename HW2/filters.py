@@ -129,7 +129,8 @@ def sobel_operator():
 
     rows, cols = Gx.shape
     result = [[np.sqrt((Gx[i][j]**2)+(Gy[i][j]**2)) for i in range(rows)] for j in range(cols)]
-    return result
+    result_array = np.array(result)
+    return result_array
 
 
 def load_image(): 
