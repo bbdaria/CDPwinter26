@@ -111,7 +111,7 @@ def correlation_numba(kernel, image):
             result[i, j] = pixel_sum
     return result
 
-def sobel_operator():
+def sobel_operator(sobel_matrix):
     '''Load the image and perform the operator
         ----------
         Return
@@ -122,10 +122,10 @@ def sobel_operator():
     # your calculations
 
     #sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
-    #sobel_matrix = [[3,0,-3],[10,0,-10],[3,0,-3]]
-    #sobel_matrix = [[1,0,-1],[2,0,-1],[1,0,-2],[2,0,-2],[1,0,-1]]
-    sobel_matrix = [[1,1,1],[1,0,1],[1,1,1]]
+    
+
     sobel_filter = np.array(sobel_matrix)
+
 
     Gx = correlation_numba(sobel_filter, pic)
     Gy = correlation_numba(np.transpose(sobel_filter), pic)
@@ -151,8 +151,19 @@ def show_image(image):
     image: list
         2d list of pixels
     """
-    #plt.imshow(image, cmap='gray')
-    #plt.show()
+    plt.imshow(image, cmap='gray')
+    plt.show()
 
-    imageio.imwrite('my_result.png', image.astype(np.uint8))
-    print("Saved image to my_result.png")
+    
+
+def __main__():
+    sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
+    kernel1_matrix = [[3,0,-3],[10,0,-10],[3,0,-3]]
+    kernel2_matrix = [[1,0,-1],[2,0,-1],[1,0,-2],[2,0,-2],[1,0,-1]]
+    kernel3_matrix = [[1,1,1],[1,0,1],[1,1,1]]
+
+    imageio.imwrite('sobel_operator.png', sobel_operator(sobel_matrix).astype(np.uint8))
+    imageio.imwrite('kernel1_operator.png', sobel_operator(kernel1_matrix).astype(np.uint8))
+    imageio.imwrite('kernel2_operator.png', sobel_operator(kernel2_matrix).astype(np.uint8))
+    imageio.imwrite('kernel3_operator.png', sobel_operator(kernel3_matrix).astype(np.uint8))
+    print("Saved image to sobel_operator.png")
