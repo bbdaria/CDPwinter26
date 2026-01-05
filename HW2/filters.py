@@ -123,7 +123,8 @@ def sobel_operator():
 
     #sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
     #sobel_matrix = [[3,0,-3],[10,0,-10],[3,0,-3]]
-    sobel_matrix = [[1,0,-1],[2,0,-1],[1,0,-2],[2,0,-2],[1,0,-1]]
+    #sobel_matrix = [[1,0,-1],[2,0,-1],[1,0,-2],[2,0,-2],[1,0,-1]]
+    sobel_matrix = [[1,1,1],[1,0,1],[1,1,1]]
     sobel_filter = np.array(sobel_matrix)
 
     Gx = correlation_numba(sobel_filter, pic)
