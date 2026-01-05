@@ -131,7 +131,12 @@ def sobel_operator(sobel_matrix):
     Gy = correlation_numba(np.transpose(sobel_filter), pic)
 
     rows, cols = Gx.shape
-    result_array = np.sqrt(Gx**2 + Gy**2)
+    magnitude = np.sqrt(Gx**2 + Gy**2)
+    max_val = np.max(magnitude)
+    if max_val > 0:
+        result_array = (magnitude / max_val) * 255.0
+    else:
+        result_array = magnitude
     return result_array
 
 
