@@ -1,6 +1,6 @@
 #
-#   @date:  [TODO: Today's date]
-#   @author: [TODO: Student Names]
+#   @date:  [TODO: 5.1.2026]
+#   @author: [TODO: Daria Bebin, Kseniia Filonenko]
 #
 # This file is for the solutions of the wet part of HW2 in
 # "Concurrent and Distributed Programming for Data processing
@@ -111,7 +111,7 @@ def correlation_numba(kernel, image):
             result[i, j] = pixel_sum
     return result
 
-def sobel_operator(sobel_matrix):
+def sobel_operator():
     '''Load the image and perform the operator
         ----------
         Return
@@ -121,7 +121,7 @@ def sobel_operator(sobel_matrix):
     pic = load_image()
     # your calculations
 
-    #sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
+    sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
     
 
     sobel_filter = np.array(sobel_matrix)
@@ -161,17 +161,17 @@ def show_image(image):
 
     
 
-def main():
-    sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
-    kernel1_matrix = [[3,0,-3],[10,0,-10],[3,0,-3]]
-    kernel2_matrix = [[1,0,-1],[2,0,-1],[1,0,-2],[2,0,-2],[1,0,-1]]
-    kernel3_matrix = [[1,1,1],[1,0,1],[1,1,1]]
+# def main():
+#     sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
+#     kernel1_matrix = [[3,0,-3],[10,0,-10],[3,0,-3]]
+#     kernel2_matrix = [[1,0,-1],[2,0,-1],[1,0,-2],[2,0,-2],[1,0,-1]]
+#     kernel3_matrix = [[1,1,1],[1,0,1],[1,1,1]]
 
-    imageio.imwrite('sobel_operator.png', sobel_operator(sobel_matrix).astype(np.uint8))
-    imageio.imwrite('kernel1_operator.png', sobel_operator(kernel1_matrix).astype(np.uint8))
-    imageio.imwrite('kernel2_operator.png', sobel_operator(kernel2_matrix).astype(np.uint8))
-    imageio.imwrite('kernel3_operator.png', sobel_operator(kernel3_matrix).astype(np.uint8))
-    print("Saved image to sobel_operator.png")
+#     imageio.imwrite('sobel_operator.png', sobel_operator(sobel_matrix).astype(np.uint8))
+#     imageio.imwrite('kernel1_operator.png', sobel_operator(kernel1_matrix).astype(np.uint8))
+#     imageio.imwrite('kernel2_operator.png', sobel_operator(kernel2_matrix).astype(np.uint8))
+#     imageio.imwrite('kernel3_operator.png', sobel_operator(kernel3_matrix).astype(np.uint8))
+#     print("Saved image to sobel_operator.png")
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
