@@ -156,7 +156,7 @@ def show_image(image):
 
     
 
-def __main__():
+def main():
     sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
     kernel1_matrix = [[3,0,-3],[10,0,-10],[3,0,-3]]
     kernel2_matrix = [[1,0,-1],[2,0,-1],[1,0,-2],[2,0,-2],[1,0,-1]]
@@ -167,3 +167,6 @@ def __main__():
     imageio.imwrite('kernel2_operator.png', sobel_operator(kernel2_matrix).astype(np.uint8))
     imageio.imwrite('kernel3_operator.png', sobel_operator(kernel3_matrix).astype(np.uint8))
     print("Saved image to sobel_operator.png")
+
+if __name__ == "__main__":
+    main()
