@@ -121,18 +121,17 @@ def sobel_operator():
     pic = load_image()
     # your calculations
 
-    sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
+    #sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
     #sobel_matrix = [[3,0,-3],[10,0,-10],[3,0,-3]]
     #sobel_matrix = [[1,0,-1],[2,0,-1],[1,0,-2],[2,0,-2],[1,0,-1]]
-    #sobel_matrix = [[1,1,1],[1,0,1],[1,1,1]]
+    sobel_matrix = [[1,1,1],[1,0,1],[1,1,1]]
     sobel_filter = np.array(sobel_matrix)
 
     Gx = correlation_numba(sobel_filter, pic)
     Gy = correlation_numba(np.transpose(sobel_filter), pic)
 
     rows, cols = Gx.shape
-    result = [[np.sqrt((Gx[i][j]**2)+(Gy[i][j]**2)) for i in range(rows)] for j in range(cols)]
-    result_array = np.array(result)
+    result_array = np.sqrt(Gx**2 + Gy**2)
     return result_array
 
 
@@ -152,8 +151,8 @@ def show_image(image):
     image: list
         2d list of pixels
     """
-    plt.imshow(image, cmap='gray')
-    plt.show()
+    #plt.imshow(image, cmap='gray')
+    #plt.show()
 
-    #imageio.imwrite('my_result.png', image.astype(np.uint8))
-    #print("Saved image to my_result.png")
+    imageio.imwrite('my_result.png', image.astype(np.uint8))
+    print("Saved image to my_result.png")
