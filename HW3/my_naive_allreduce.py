@@ -13,4 +13,21 @@ def allreduce(send, recv, comm, op):
     comm : MPI.Comm
     op : associative commutative binary operator
     """
-    raise NotImplementedError("To be implemented")
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
+    np.copyto(recv, send)
+
+    for src in range(size):
+        if src == rank:
+            continue
+
+        tmp = np.empty_like(send)
+        comm.Sendrecv(
+            sendbuf=send,
+            dest=src,
+            source=src
+        )
+        recv[:] = op(recv, tmp)
+
+    return recv
