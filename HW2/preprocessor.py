@@ -1,6 +1,6 @@
 #
-#   @date:  [TODO: Today's date]
-#   @author: [TODO: Student Names]
+#   @date:  [TODO: 5.1.2026]
+#   @author: [TODO: Daria Bebin, Kseniia Filonenko]
 #
 # This file is for the solutions of the wet part of HW2 in
 # "Concurrent and Distributed Programming for Data processing

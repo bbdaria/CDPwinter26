@@ -1,6 +1,6 @@
 #
-#   @date:  [TODO: Today's date]
-#   @author: [TODO: Student Names]
+#   @date:  [TODO: 5.1.2026]
+#   @author: [TODO: Daria Bebin, Kseniia Filonenko]
 #
 # This file is for the solutions of the wet part of HW2 in
 # "Concurrent and Distributed Programming for Data processing
@@ -18,7 +18,8 @@ import numpy as np
 @cuda.jit
 def correlation_kernel(kernel, image, result):
     # coordinates of current thread
-    row, col = cuda.grid(2)
+    row = cuda.blockIdx.x      # block maps to row
+    col = cuda.threadIdx.x     # thread maps to column
 
     image_height, image_width = image.shape
     kernel_height, kernel_width = kernel.shape
@@ -26,22 +27,14 @@ def correlation_kernel(kernel, image, result):
     pad_h = kernel_height // 2
     pad_w = kernel_width // 2
 
-    # Check borders
     if row < image_height and col < image_width:
         value = 0.0
-
-        # Iterate over kernel
         for i in range(kernel_height):
             for j in range(kernel_width):
-
-                # neighbour coords
-                current_row = row - pad_h + i
-                current_col = col - pad_w + j
-
-                # check borders
-                if 0 <= current_row < image_height and 0 <= current_col < image_width:
-                    value += image[current_row, current_col] * kernel[i, j]
-
+                rr = row - pad_h + i
+                cc = col - pad_w + j
+                if 0 <= rr < image_height and 0 <= cc < image_width:
+                    value += image[rr, cc] * kernel[i, j]
         result[row, col] = value
 
 def correlation_gpu(kernel, image):
@@ -57,26 +50,19 @@ def correlation_gpu(kernel, image):
     ------
     An numpy array of same shape as image
     '''
-    # 1. Send data to GPU
-    d_image = cuda.to_device(image) #copies data to gpu
+    d_image = cuda.to_device(image)
     d_kernel = cuda.to_device(kernel)
-
-    # allocate space for result
     d_result = cuda.device_array_like(image)
 
-    # 2. Configurate launch
-    # Block - group of threads that will work together
-    threads_per_block = (16, 16)
+    rows, cols = image.shape
 
-    # Grid - blocks to cover full image
-    blocks_per_grid_x = math.ceil(image.shape[0] / threads_per_block[0])
-    blocks_per_grid_y = math.ceil(image.shape[1] / threads_per_block[1])
-    blocks_per_grid = (blocks_per_grid_x, blocks_per_grid_y)
+    # literal mapping like version2:
+    blockspergrid = rows
+    threadsperblock = cols
 
-    # 3. launch kernel
-    correlation_kernel[blocks_per_grid, threads_per_block](d_kernel, d_image, d_result)
+    # IMPORTANT: cols must be <= 1024 for most GPUs
+    correlation_kernel[blockspergrid, threadsperblock](d_kernel, d_image, d_result)
 
-    # 4. copy result back to CPU
     return d_result.copy_to_host()
 
 @njit
@@ -136,15 +122,22 @@ def sobel_operator():
     # your calculations
 
     sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
+    
+
     sobel_filter = np.array(sobel_matrix)
+
 
     Gx = correlation_numba(sobel_filter, pic)
     Gy = correlation_numba(np.transpose(sobel_filter), pic)
 
     rows, cols = Gx.shape
-    result = [[np.sqrt(np.pow(Gx[i][j],2)+np.pow(Gy[i][j],2)) for i in range(rows)] for j in range(cols)]
-
-    return result
+    magnitude = np.sqrt(Gx**2 + Gy**2)
+    max_val = np.max(magnitude)
+    if max_val > 0:
+        result_array = (magnitude / max_val) * 255.0
+    else:
+        result_array = magnitude
+    return result_array
 
 
 def load_image(): 
@@ -165,3 +158,20 @@ def show_image(image):
     """
     plt.imshow(image, cmap='gray')
     plt.show()
+
+    
+
+# def main():
+#     sobel_matrix = [[1,0,-1],[2,0,-2],[1,0,-1]]
+#     kernel1_matrix = [[3,0,-3],[10,0,-10],[3,0,-3]]
+#     kernel2_matrix = [[1,0,-1],[2,0,-1],[1,0,-2],[2,0,-2],[1,0,-1]]
+#     kernel3_matrix = [[1,1,1],[1,0,1],[1,1,1]]
+
+#     imageio.imwrite('sobel_operator.png', sobel_operator(sobel_matrix).astype(np.uint8))
+#     imageio.imwrite('kernel1_operator.png', sobel_operator(kernel1_matrix).astype(np.uint8))
+#     imageio.imwrite('kernel2_operator.png', sobel_operator(kernel2_matrix).astype(np.uint8))
+#     imageio.imwrite('kernel3_operator.png', sobel_operator(kernel3_matrix).astype(np.uint8))
+#     print("Saved image to sobel_operator.png")
+
+# if __name__ == "__main__":
+#     main()

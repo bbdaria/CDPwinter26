@@ -1,6 +1,6 @@
 #
-#   @date:  [TODO: Today's date]
-#   @author: [TODO: Student Names]
+#   @date:  [TODO: 5.1.2026]
+#   @author: [TODO: Daria Bebin, Kseniia Filonenko]
 #
 # This file is for the solutions of the wet part of HW2 in
 # "Concurrent and Distributed Programming for Data processing
@@ -15,6 +15,7 @@ class MyQueue(object):
     def __init__(self):
         self.readers, self.writers = Pipe(False)
         self.lock = Lock()
+        self.count = 0
         
 
     def put(self, msg):
@@ -27,6 +28,7 @@ class MyQueue(object):
         '''
         with self.lock:
             self.writers.send(msg)
+            self.count += 1
             
 
 
@@ -37,6 +39,7 @@ class MyQueue(object):
         ------
         An object
         '''
+        self.count -= 1
         return self.readers.recv()
             
     
@@ -47,4 +50,5 @@ class MyQueue(object):
         ------
         A boolean value
         '''
-        return self.readers.poll()
+    
+        return self.count == 0
