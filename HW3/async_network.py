@@ -47,43 +47,47 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
         # setting up the number of batches the worker should do every epoch
         #Divide the batches between all workers
         batches_per_worker = self.number_of_batches // self.num_workers
+        if self.rank == self.num_workers - 1:
+            # Last worker takes the remainder
+            self.number_of_batches -= (self.num_workers - 1) * batches_per_worker
+        else:
+            self.number_of_batches = batches_per_worker
+
         for epoch in range(self.epochs):
             # creating batches for epoch
             data = training_data[0]
             labels = training_data[1]
             mini_batches = self.create_batches(data, labels, self.mini_batch_size)
+            
             for x, y in mini_batches:
-                # do work - don't change this
                 self.forward_prop(x)
                 nabla_b, nabla_w = self.back_prop(y)
 
-                # send nabla_b, nabla_w to masters
+                # 2. FIX: Use Uppercase Isend (sending arrays individually)
+                # Send nabla_w and nabla_b to the correct masters
                 requests = []
+                for l in range(self.num_layers):
+                    # Determine destination master for this layer
+                    dest_master = l % self.num_masters
+                    
+                    # Tag strategy: Layer index for Weights, Layer+NumLayers for Biases
+                    requests.append(self.comm.Isend(nabla_w[l], dest=dest_master, tag=l))
+                    requests.append(self.comm.Isend(nabla_b[l], dest=dest_master, tag=l + self.num_layers))
 
-                # iterate over each master to send them their specific layers
-                for m_rank in range(self.num_masters):
-                    # Identify which layers belong to master 'm_rank'
-                    layers_indices = range(m_rank, self.num_layers, self.num_masters)
+                # Must wait for sends to clear the buffer before modifying/proceeding
+                for r in requests:
+                    r.Wait()
 
-                    # Pack the gradients for these specific layers
-                    m_nabla_w = [nabla_w[i] for i in layers_indices]
-                    m_nabla_b = [nabla_b[i] for i in layers_indices]
-
-                    # Asynchronously send to the master (Tag 1 for gradients)
-                    req = self.comm.isend((m_nabla_w, m_nabla_b), dest=m_rank, tag=1)
-                    requests.append(req)
-
-                # recieve new self.weight and self.biases values from masters
-                for m_rank in range(self.num_masters):
-                    # Asynchronously receive updated weights (Tag 2 for weights)
-                    req = self.comm.irecv(source=m_rank, tag=2)
-                    new_w, new_b = req.wait()  # Wait to ensure we have data before next batch
-
-                    # Update local parameters
-                    layers_indices = range(m_rank, self.num_layers, self.num_masters)
-                    for i, w, b in zip(layers_indices, new_w, new_b):
-                        self.weights[i] = w
-                        self.biases[i] = b
+                # 3. FIX: Use Uppercase Irecv to get updated parameters
+                requests = []
+                for l in range(self.num_layers):
+                    src_master = l % self.num_masters
+                    requests.append(self.comm.Irecv(self.weights[l], source=src_master, tag=l))
+                    requests.append(self.comm.Irecv(self.biases[l], source=src_master, tag=l + self.num_layers))
+                
+                # Wait for new weights to arrive before next batch
+                for r in requests:
+                    r.Wait()
 
     def do_master(self, validation_data):
         """
@@ -99,59 +103,59 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
 
         for epoch in range(self.epochs):
             for batch in range(self.number_of_batches):
-
-                # wait for any worker to finish batch and
-                # get the nabla_w, nabla_b for the master's layers
-                # TODO: add your code
+                
+                # 2. Receive gradients from ANY worker
+                # We start by listening for the first layer's weight gradient from MPI.ANY_SOURCE.
+                # This allows us to identify which worker is ready.
+                
+                # Identify the first layer index this master manages
+                first_layer_idx = self.rank 
+                
+                # Buffer for the first message
                 status = MPI.Status()
-                #  wait for any worker to send us gradients (Tag 1)
-                req = self.comm.irecv(source=MPI.ANY_SOURCE, tag=1)
-                data = req.wait(status=status)  # Wait for the data
+                
+                # Wait for the first weight gradient from any worker
+                req = self.comm.Irecv(nabla_w[0], source=MPI.ANY_SOURCE, tag=first_layer_idx)
+                req.Wait(status)
+                
+                # Identify the worker who sent the message
+                worker_rank = status.Get_source()
+                
+                # 3. Receive the rest of the gradients from that SAME worker
+                requests = []
+                
+                # We already got nabla_w[0], now get the corresponding bias
+                requests.append(self.comm.Irecv(nabla_b[0], source=worker_rank, tag=first_layer_idx + self.num_layers))
+                
+                # Receive the rest of the layers this master manages
+                # We enumerate starting from 1 because index 0 (nabla_w[0]) is already received
+                for i, l in enumerate(range(self.rank + self.num_masters, self.num_layers, self.num_masters), 1):
+                    # Tag 'l' for weights, 'l + num_layers' for biases
+                    requests.append(self.comm.Irecv(nabla_w[i], source=worker_rank, tag=l))
+                    requests.append(self.comm.Irecv(nabla_b[i], source=worker_rank, tag=l + self.num_layers))
+                
+                # Wait for all gradient parts to arrive
+                for r in requests:
+                    r.Wait()
 
-                received_nabla_w, received_nabla_b = data
-                worker_rank = status.Get_source()  # Identify who sent this
+                # 4. Perform Gradient Descent Update
+                # Note: 'i' is the local index in nabla lists, 'l' is the global layer index
+                for i, l in enumerate(range(self.rank, self.num_layers, self.num_masters)):
+                    self.weights[l] = self.weights[l] - self.eta * nabla_w[i]
+                    self.biases[l] = self.biases[l] - self.eta * nabla_b[i]
 
-                # Update the local temporary variables
-                nabla_w = received_nabla_w
-                nabla_b = received_nabla_b
+                # 5. Send updated parameters back to the SAME worker
+                requests = []
+                for l in range(self.rank, self.num_layers, self.num_masters):
+                    # Send updated weights and biases using non-blocking Isend
+                    requests.append(self.comm.Isend(self.weights[l], dest=worker_rank, tag=l))
+                    requests.append(self.comm.Isend(self.biases[l], dest=worker_rank, tag=l + self.num_layers))
+                
+                # Wait for sends to complete
+                for r in requests:
+                    r.Wait()
 
-                # calculate new weights and biases (of layers in charge)
-                for i, dw, db in zip(range(self.rank, self.num_layers, self.num_masters), nabla_w, nabla_b):
-                    self.weights[i] = self.weights[i] - self.eta * dw
-                    self.biases[i] = self.biases[i] - self.eta * db
-
-                # send new values (of layers in charge)
-                # prepare the list of current weights/biases to send back
-                layers_indices = range(self.rank, self.num_layers, self.num_masters)
-                current_w = [self.weights[i] for i in layers_indices]
-                current_b = [self.biases[i] for i in layers_indices]
-
-                # Send back to the worker who asked (Tag 2)
-                self.comm.isend((current_w, current_b), dest=worker_rank, tag=2)
-
+            # End of epoch progress print
             self.print_progress(validation_data, epoch)
 
-        # gather relevant weight and biases to process 0
-        # TODO: add your code
-        my_layers_data = {
-            'indices': list(range(self.rank, self.num_layers, self.num_masters)),
-            'weights': [self.weights[i] for i in range(self.rank, self.num_layers, self.num_masters)],
-            'biases': [self.biases[i] for i in range(self.rank, self.num_layers, self.num_masters)]
-        }
-
-        gathered_data = self.comm.gather(my_layers_data, root=0)
-
-        if self.rank == 0:
-            # Reconstruct the full model from the gathered pieces
-            # Only Ranks 0 to num_masters-1 have real data. Workers (if any returned) are ignored.
-
-            for m_data in gathered_data:
-                if m_data is None: continue  # Skip workers if they participated in gather
-
-                indices = m_data['indices']
-                w_list = m_data['weights']
-                b_list = m_data['biases']
-
-                for idx, w, b in zip(indices, w_list, b_list):
-                    self.weights[idx] = w
-                    self.biases[idx] = b
+        
