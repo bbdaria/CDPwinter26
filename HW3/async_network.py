@@ -25,7 +25,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
         self.comm = MPI.COMM_WORLD
         self.rank = self.comm.Get_rank()
         self.size = self.comm.Get_size()
-		self.num_workers = self.size - self.num_masters
+        self.num_workers = self.size - self.num_masters
 
         self.layers_per_master = self.num_layers // self.num_masters
 
