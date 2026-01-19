@@ -109,7 +109,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                 # This allows us to identify which worker is ready.
                 
                 # Identify the first layer index this master manages
-                first_layer_idx = self.rank =
+                first_layer_idx = self.rank
                 
                 # Buffer for the first message
                 status = MPI.Status()
