@@ -75,8 +75,8 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                     requests.append(self.comm.Isend(nabla_b[l], dest=dest_master, tag=l + self.num_layers))
 
                 # Must wait for sends to clear the buffer before modifying/proceeding
-                for r in requests:
-                    r.Wait()
+                #for r in requests:
+                #    r.Wait()
 
                 # 3. FIX: Use Uppercase Irecv to get updated parameters
                 requests = []
@@ -109,7 +109,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                 # This allows us to identify which worker is ready.
                 
                 # Identify the first layer index this master manages
-                first_layer_idx = self.rank 
+                first_layer_idx = self.rank =
                 
                 # Buffer for the first message
                 status = MPI.Status()
