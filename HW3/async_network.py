@@ -72,11 +72,11 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                     r.Wait()
 
                 # recieve new self.weight and self.biases values from masters
-                # TODO: add your code
                 requests = []
                 for l in range(self.num_layers):
-                    requests.append(self.comm.Irecv(self.weights[l], src=(l%self.num_masters), tag=l))
-                    requests.append(self.comm.Irecv(self.biases[l], src=(l%self.num_masters), tag=l+self.num_layers)) 
+                    # FIX: Changed src= to source=
+                    requests.append(self.comm.Irecv(self.weights[l], source=(l%self.num_masters), tag=l))
+                    requests.append(self.comm.Irecv(self.biases[l], source=(l%self.num_masters), tag=l+self.num_layers)) 
                     
                 # waiting on all the send/recv calls before continueing to next epoch
                 for r in requests:
@@ -102,18 +102,18 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                 
                 status = MPI.Status()
                 
-                # FIX: changed src= to source=
+                # FIX: MPI.ANY_SOURCE and source=
                 first_req = self.comm.Irecv(nabla_w[0], source=MPI.ANY_SOURCE, tag=self.rank)
                 first_req.Wait(status)
                 
+                # FIX: Get source from status
                 source = status.Get_source()
                 
-                # FIX: changed src= to source=
+                # FIX: source= and correct tag for bias
                 requests = [self.comm.Irecv(nabla_b[0], source=source, tag=self.rank + self.num_layers)]
 
                 i = 1
                 for l in range(self.rank + self.num_masters, self.num_layers, self.num_masters):
-                    # FIX: changed src= to source=
                     requests.append(self.comm.Irecv(nabla_w[i], source=source, tag=l))
                     requests.append(self.comm.Irecv(nabla_b[i], source=source, tag=l+self.num_layers))
                     i += 1
@@ -142,7 +142,6 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
         if self.rank == 0:
             for l in range(self.num_layers):
                 if l%self.num_masters != 0:
-                    # FIX: changed src= to source=
                     requests.append(self.comm.Irecv(self.weights[l], source=(l%self.num_masters), tag=l))
                     requests.append(self.comm.Irecv(self.biases[l], source=(l%self.num_masters), tag=l+self.num_layers)) 
         else:
