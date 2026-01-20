@@ -99,11 +99,23 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
             for batch in range(self.number_of_batches):
                 # wait for any worker to finish batch and
                 # get the nabla_w, nabla_b for the master's layers
-                # TODO: add your code
-                first_req = self.comm.Irecv(nabla_w[0], src=MPI.ANY_SRC, tag=self.rank)
-                first_req.Wait()
-                source = first_req.Get_source()
-                requests = [self.comm.Irecv(nabla_b[0], src=source, tag=self.rank)]
+                
+                # --- START OF FIXES ---
+                status = MPI.Status() # Create a Status object to hold message info
+                
+                # Use MPI.ANY_SOURCE instead of ANY_SRC
+                first_req = self.comm.Irecv(nabla_w[0], src=MPI.ANY_SOURCE, tag=self.rank)
+                
+                # Pass status to Wait to populate it
+                first_req.Wait(status)
+                
+                # Get the source rank from the status object
+                source = status.Get_source()
+                
+                # Logic fix: Tag for bias must match worker's send (rank + num_layers)
+                requests = [self.comm.Irecv(nabla_b[0], src=source, tag=self.rank + self.num_layers)]
+                # --- END OF FIXES ---
+
                 i = 1
                 for l in range(self.rank + self.num_masters, self.num_layers, self.num_masters):
                     requests.append(self.comm.Irecv(nabla_w[i], src=source, tag=l))
@@ -119,7 +131,6 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                     self.biases[i] = self.biases[i] - self.eta * db
 
                 # send new values (of layers in charge)
-                # TODO: add your code
                 requests = []
                 for l in range(self.rank, self.num_layers, self.num_masters):
                     requests.append(self.comm.Isend(self.weights[l], dest=source, tag=l))
@@ -131,7 +142,6 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
             self.print_progress(validation_data, epoch)
 
         # gather relevant weight and biases to process 0
-        # TODO: add your code
         requests = []
         if self.rank == 0:
             for l in range(self.num_layers):
