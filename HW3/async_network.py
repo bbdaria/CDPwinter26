@@ -45,7 +45,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
         :param training_data: a tuple of data and labels to train the NN with
         """
         # setting up the number of batches the worker should do every epoch
-        #Divide the batches between all workers
+        # Divide the batches between all workers
         batches_per_worker = self.number_of_batches // self.num_workers
         if self.rank == self.num_workers - 1:
             # Last worker takes the remainder
@@ -58,7 +58,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
             data = training_data[0]
             labels = training_data[1]
             mini_batches = self.create_batches(data, labels, self.mini_batch_size)
-            
+
             for x, y in mini_batches:
                 self.forward_prop(x)
                 nabla_b, nabla_w = self.back_prop(y)
@@ -69,14 +69,15 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                 for l in range(self.num_layers):
                     # Determine destination master for this layer
                     dest_master = l % self.num_masters
-                    
+
                     # Tag strategy: Layer index for Weights, Layer+NumLayers for Biases
                     requests.append(self.comm.Isend(nabla_w[l], dest=dest_master, tag=l))
                     requests.append(self.comm.Isend(nabla_b[l], dest=dest_master, tag=l + self.num_layers))
 
                 # Must wait for sends to clear the buffer before modifying/proceeding
-                #for r in requests:
-                #    r.Wait()
+                # prevent sending garbage data in next iteration
+                for r in requests:
+                    r.Wait()
 
                 # 3. FIX: Use Uppercase Irecv to get updated parameters
                 requests = []
@@ -84,7 +85,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                     src_master = l % self.num_masters
                     requests.append(self.comm.Irecv(self.weights[l], source=src_master, tag=l))
                     requests.append(self.comm.Irecv(self.biases[l], source=src_master, tag=l + self.num_layers))
-                
+
                 # Wait for new weights to arrive before next batch
                 for r in requests:
                     r.Wait()
@@ -103,37 +104,37 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
 
         for epoch in range(self.epochs):
             for batch in range(self.number_of_batches):
-                
+
                 # 2. Receive gradients from ANY worker
                 # We start by listening for the first layer's weight gradient from MPI.ANY_SOURCE.
                 # This allows us to identify which worker is ready.
-                
+
                 # Identify the first layer index this master manages
                 first_layer_idx = self.rank
-                
+
                 # Buffer for the first message
                 status = MPI.Status()
-                
+
                 # Wait for the first weight gradient from any worker
                 req = self.comm.Irecv(nabla_w[0], source=MPI.ANY_SOURCE, tag=first_layer_idx)
                 req.Wait(status)
-                
+
                 # Identify the worker who sent the message
                 worker_rank = status.Get_source()
-                
+
                 # 3. Receive the rest of the gradients from that SAME worker
                 requests = []
-                
+
                 # We already got nabla_w[0], now get the corresponding bias
                 requests.append(self.comm.Irecv(nabla_b[0], source=worker_rank, tag=first_layer_idx + self.num_layers))
-                
+
                 # Receive the rest of the layers this master manages
                 # We enumerate starting from 1 because index 0 (nabla_w[0]) is already received
                 for i, l in enumerate(range(self.rank + self.num_masters, self.num_layers, self.num_masters), 1):
                     # Tag 'l' for weights, 'l + num_layers' for biases
                     requests.append(self.comm.Irecv(nabla_w[i], source=worker_rank, tag=l))
                     requests.append(self.comm.Irecv(nabla_b[i], source=worker_rank, tag=l + self.num_layers))
-                
+
                 # Wait for all gradient parts to arrive
                 for r in requests:
                     r.Wait()
@@ -150,12 +151,24 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                     # Send updated weights and biases using non-blocking Isend
                     requests.append(self.comm.Isend(self.weights[l], dest=worker_rank, tag=l))
                     requests.append(self.comm.Isend(self.biases[l], dest=worker_rank, tag=l + self.num_layers))
-                
+
                 # Wait for sends to complete
                 for r in requests:
                     r.Wait()
 
             # End of epoch progress print
-            self.print_progress(validation_data, epoch)
+            if self.rank == 0:  # Only rank 0 prints progress (?)
+                self.print_progress(validation_data, epoch)
 
-        
+        # gather relevant weight and biases to process 0
+
+        if self.rank == 0: # gather final model at Rank 0
+            for l in range(self.num_layers):
+                owner = l % self.num_masters
+                if owner != self.rank:
+                    self.comm.Recv(self.weights[l], source=owner, tag=l)
+                    self.comm.Recv(self.biases[l], source=owner, tag=l + self.num_layers)
+        else:
+            for l in range(self.rank, self.num_layers, self.num_masters):
+                self.comm.Send(self.weights[l], dest=0, tag=l)
+                self.comm.Send(self.biases[l], dest=0, tag=l + self.num_layers)
