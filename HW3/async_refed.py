@@ -162,7 +162,7 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                     r.Wait()
 
             # End of epoch progress print
-            if self.rank == 0: # Only Rank 0 prints progress
+            if self.rank == 0: # Only Rank 0 prints progress (?)
                 self.print_progress(validation_data, epoch)
 
         # gather relevant weight and biases to process 0

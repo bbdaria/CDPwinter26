@@ -172,3 +172,6 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
             for l in range(self.rank, self.num_layers, self.num_masters):
                 self.comm.Send(self.weights[l], dest=0, tag=l)
                 self.comm.Send(self.biases[l], dest=0, tag=l + self.num_layers)
+
+        for r in requests:  # added wait (ref has this)
+            r.Wait()
