@@ -9,6 +9,11 @@ from time import time
 mpi4py.rc(initialize=False, finalize=False)
 from mpi4py import MPI
 
+TAG_GRADS  = 10001
+TAG_PARAMS = 10002
+TAG_GATHER = 10003
+TAG_INIT   = 10004
+
 
 class AsynchronicNeuralNetwork(NeuralNetwork):
 
