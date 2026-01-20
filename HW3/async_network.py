@@ -100,26 +100,22 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
                 # wait for any worker to finish batch and
                 # get the nabla_w, nabla_b for the master's layers
                 
-                # --- START OF FIXES ---
-                status = MPI.Status() # Create a Status object to hold message info
+                status = MPI.Status()
                 
-                # Use MPI.ANY_SOURCE instead of ANY_SRC
-                first_req = self.comm.Irecv(nabla_w[0], src=MPI.ANY_SOURCE, tag=self.rank)
-                
-                # Pass status to Wait to populate it
+                # FIX: changed src= to source=
+                first_req = self.comm.Irecv(nabla_w[0], source=MPI.ANY_SOURCE, tag=self.rank)
                 first_req.Wait(status)
                 
-                # Get the source rank from the status object
                 source = status.Get_source()
                 
-                # Logic fix: Tag for bias must match worker's send (rank + num_layers)
-                requests = [self.comm.Irecv(nabla_b[0], src=source, tag=self.rank + self.num_layers)]
-                # --- END OF FIXES ---
+                # FIX: changed src= to source=
+                requests = [self.comm.Irecv(nabla_b[0], source=source, tag=self.rank + self.num_layers)]
 
                 i = 1
                 for l in range(self.rank + self.num_masters, self.num_layers, self.num_masters):
-                    requests.append(self.comm.Irecv(nabla_w[i], src=source, tag=l))
-                    requests.append(self.comm.Irecv(nabla_b[i], src=source, tag=l+self.num_layers))
+                    # FIX: changed src= to source=
+                    requests.append(self.comm.Irecv(nabla_w[i], source=source, tag=l))
+                    requests.append(self.comm.Irecv(nabla_b[i], source=source, tag=l+self.num_layers))
                     i += 1
                 
                 for r in requests:
@@ -146,8 +142,9 @@ class AsynchronicNeuralNetwork(NeuralNetwork):
         if self.rank == 0:
             for l in range(self.num_layers):
                 if l%self.num_masters != 0:
-                    requests.append(self.comm.Irecv(self.weights[l], src=(l%self.num_masters), tag=l))
-                    requests.append(self.comm.Irecv(self.biases[l], src=(l%self.num_masters), tag=l+self.num_layers)) 
+                    # FIX: changed src= to source=
+                    requests.append(self.comm.Irecv(self.weights[l], source=(l%self.num_masters), tag=l))
+                    requests.append(self.comm.Irecv(self.biases[l], source=(l%self.num_masters), tag=l+self.num_layers)) 
         else:
             for l in range(self.rank, self.num_layers, self.num_masters):
                 requests.append(self.comm.Isend(self.weights[l], dest=0, tag=l))
