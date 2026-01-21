@@ -42,7 +42,9 @@ for size in [2**12, 2**15, 2**18, 2**21]:
     print("Naive all-reduce correct:", np.allclose(res1, ground_truth))
     print("Ring all-reduce correct:", np.allclose(res2, ground_truth))
     print()
-    print()import sys
+    print()
+    
+import sys
 from time import time
 import numpy as np
 from my_naive_allreduce import *
