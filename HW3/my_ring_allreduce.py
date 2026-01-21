@@ -20,11 +20,10 @@ def ringallreduce(send, recv, comm, op):
     # 1. Copy data to recv buffer
     np.copyto(recv, send)
 
-    # 2. Create a flat view of the array to handle 2D/3D inputs correctly
-    #    This allows us to treat matrices as a long stream of numbers
+    # 2. Create a flat view of the array
     recv_flat = recv.reshape(-1)
 
-    # 3. Calculate chunks based on the FLATTENED size
+    # 3. Calculate chunks
     total_elements = recv_flat.size
     chunk_size = total_elements // p
     
@@ -39,7 +38,6 @@ def ringallreduce(send, recv, comm, op):
     for i in range(p - 1):
         # scatter
         send_start, send_end = chunks[current]
-        # Use recv_flat for slicing!
         req = comm.Isend(recv_flat[send_start:send_end], dest=right, tag=0)
 
         current = (current - 1) % p
@@ -48,13 +46,16 @@ def ringallreduce(send, recv, comm, op):
         tmp = np.empty(recv_end - recv_start, dtype=recv.dtype)
         comm.Recv(tmp, source=left, tag=0)
 
-        # reduce using the flat view
+        # reduce
         recv_flat[recv_start:recv_end] = op(recv_flat[recv_start:recv_end], tmp)
 
         req.Wait()
     
     # --- Phase 2: All-Gather ---
-    current = (rank - 1) % p
+    # FIX: Start sending the chunk we currently hold the full result for.
+    # After Phase 1, rank r holds the full result for chunk (r + 1) % p.
+    current = (rank + 1) % p
+    
     for i in range(p - 1):
         # gather
         send_start, send_end = chunks[current]
@@ -66,12 +67,11 @@ def ringallreduce(send, recv, comm, op):
         tmp = np.empty(recv_end - recv_start, dtype=recv.dtype)
         comm.Recv(tmp, source=left, tag=1)
 
-        # store result in flat view
+        # store result
         recv_flat[recv_start:recv_end] = tmp
 
         req.Wait()
         
-    # No need to reshape back, modifying recv_flat modifies recv in-place (if contiguous)
     return recv
 
 
