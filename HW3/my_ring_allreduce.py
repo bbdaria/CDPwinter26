@@ -52,8 +52,6 @@ def ringallreduce(send, recv, comm, op):
         req.Wait()
     
     # --- Phase 2: All-Gather ---
-    # FIX: Start sending the chunk we currently hold the full result for.
-    # After Phase 1, rank r holds the full result for chunk (r + 1) % p.
     current = (rank + 1) % p
     
     for i in range(p - 1):
