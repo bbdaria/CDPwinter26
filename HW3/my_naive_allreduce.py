@@ -26,8 +26,10 @@ def allreduce(send, recv, comm, op):
         comm.Sendrecv(
             sendbuf=send,
             dest=src,
+            recvbuf=tmp,
             source=src
         )
+        
         recv[:] = op(recv, tmp)
 
     return recv
